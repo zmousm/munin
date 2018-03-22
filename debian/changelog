@@ -1,3 +1,9 @@
+munin (2.0.35-1~grnet+1) unstable; urgency=medium
+
+  * New upstream bugfix release.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 23 Mar 2018 01:35:02 +0200
+
 munin (2.0.34-3) unstable; urgency=medium
 
   * debian/munin-node.triggers: use an explicit interest-await trigger for
