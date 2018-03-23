@@ -1,3 +1,11 @@
+munin (2.0.35-1~grnet+3) unstable; urgency=medium
+
+  * Add debian/patches/0002-Simplify-spooled-value-regex.patch
+  * Add debian/patches/0003-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
+  * Add carbon patches
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 23 Mar 2018 09:33:06 +0200
+
 munin (2.0.35-1~grnet+2) unstable; urgency=medium
 
   * Revert "Partly revert f1f48dee so that directories are again setup correctly on initial installations. (Closes: #885454)"
