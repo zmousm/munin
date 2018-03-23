@@ -11,6 +11,7 @@ Build-Depends-Indep:
  perl,
 Build-Depends:
  debhelper (>=10.2.5~),
+ dh-systemd (>= 1.4),
  libmodule-build-perl,
 Standards-Version: 4.1.1
 Homepage: http://munin-monitoring.org
