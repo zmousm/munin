@@ -1,3 +1,18 @@
+munin (2.0.35-1~grnet+2) unstable; urgency=medium
+
+  * Revert "Partly revert f1f48dee so that directories are again setup correctly on initial installations. (Closes: #885454)"
+  * Revert "Bump Standards-Version to 4.1.3, no changes needed."
+  * Revert "Drop Breaks and Replaces for munin-plugins-core on pre-Jessie versions of munin-plugins-extra."
+  * Revert "debian/(munin|munin-node|munin-async).postinst: drop legacy code dealing with pre-Jessie releases."
+  * Revert "debian/rules: call dh with --no-parallel, as debhelper compat 10 introduces parallel building. This will probably also "fix" #839233."
+  * Revert "Drop obsolete dependency on dh-systemd, nowadays taken care of by debhelper."
+  * Revert "Drop unnecessary "Testsuite:autopkgtest" header from debian/control, thanks lintian."
+  * Revert "Bump debian/compat to 10 and build-depend on debhelper >= 10.2.5~."
+  * Revert "Bump Standards-Version to 4.1.1, no changes needed."
+  * Don't require a specific version of dh-systemd
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 23 Mar 2018 13:16:48 +0200
+
 munin (2.0.35-1~grnet+1) unstable; urgency=medium
 
   * New upstream bugfix release.
