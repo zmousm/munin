@@ -1,0 +1,57 @@
+From bf9216775181f23efa2d9e8b3e644056af2ed139 Mon Sep 17 00:00:00 2001
+From: Darac Marjal <darac@darac.org.uk>
+Date: Sat, 4 Apr 2015 14:52:56 +0100
+Subject: [PATCH] Add proper Line Ending for carbon
+
+Also avoid ".."
+---
+ master/lib/Munin/Master/UpdateWorker.pm | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
+index 1edbea4a..10eadec0 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -84,7 +84,7 @@ sub do_work {
+ 
+ 	# Try Connecting to the Carbon Server
+ 	if ($config->{carbon_server} ne "") {
+-		DEBUG "[DEBUG] Connecting to Carbon Server $config->{carbon_server}:$config->{carbon_port}...";
++		DEBUG "[DEBUG] Connecting to Carbon server $config->{carbon_server}:$config->{carbon_port}...";
+ 		$self->{carbon_socket} = IO::Socket::INET->new (
+ 				PeerAddr => $config->{carbon_server},
+ 				PeerPort => $config->{carbon_port},
+@@ -597,7 +597,7 @@ sub _update_carbon_server {
+ 		}
+ 	}
+ 
+-	$metric_path .= $self->{host}{host_name} . ".";
++	$metric_path .= (join ".", reverse split /\./, $self->{host}{host_name}) . ".";
+ 
+ 	for my $service (keys %{$nested_service_config->{data_source}}) {
+ 		my $service_config = $nested_service_config->{data_source}{$service};
+@@ -610,9 +610,8 @@ sub _update_carbon_server {
+ 				# _update_rrd_files will already have warned about this so silently move on
+ 				next;
+ 			}
+-
+-	    	if (defined($service_data) and defined($service_data->{$ds_name})) {
+-				# $self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}));
++			
++			if (defined($service_data) and defined($service_data->{$ds_name})) {
+ 				my $values = $service_data->{$ds_name}{value};
+ 				next unless defined ($values);
+ 				for (my $i = 0; $i < scalar @$values; $i++) {
+@@ -633,7 +632,8 @@ sub _update_carbon_server {
+ 						}
+ 					}
+ 
+-					$self->{carbon_socket}->print("${metric_path}.$service.$ds_name $value $when");
++					DEBUG "[DEBUG] Sending ${metric_path}$service.$ds_name to Carbon";
++					$self->{carbon_socket}->print("${metric_path}$service.$ds_name $value $when\n");
+ 
+ 			} else {
+ 				# Again, _update_rrd_files will have warned
+-- 
+2.16.2
+

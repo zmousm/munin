@@ -1,0 +1,25 @@
+From 2e92823f8bce8a5012764f93b3d7d1e813fdf15e Mon Sep 17 00:00:00 2001
+From: Steve Schnepp <steve.schnepp@pwkf.org>
+Date: Wed, 27 Apr 2016 04:41:29 +0200
+Subject: [PATCH] update: do handle undefined carbon server
+
+---
+ master/lib/Munin/Master/UpdateWorker.pm | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
+index bb0482e7..32f5002f 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -83,7 +83,7 @@ sub do_work {
+ 	);
+ 
+ 	# Try Connecting to the Carbon Server
+-	if ($config->{carbon_server} ne "") {
++	if ($config->{carbon_server}) {
+ 		DEBUG "[DEBUG] Connecting to Carbon server $config->{carbon_server}:$config->{carbon_port}...";
+ 		$self->{carbon_socket} = IO::Socket::INET->new (
+ 				PeerAddr => $config->{carbon_server},
+-- 
+2.16.2
+

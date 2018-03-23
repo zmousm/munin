@@ -1,0 +1,61 @@
+From 352f50d095a82c1bf8cca8f60380a84a8e92ebc3 Mon Sep 17 00:00:00 2001
+From: Darac Marjal <darac@darac.org.uk>
+Date: Sat, 4 Apr 2015 12:05:42 +0100
+Subject: [PATCH] Update, and pass, tests
+
+---
+ master/lib/Munin/Master/UpdateWorker.pm | 8 ++++----
+ master/t/munin_master_config.t          | 3 +++
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
+index 2f7413a4..1edbea4a 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -83,7 +83,7 @@ sub do_work {
+ 	);
+ 
+ 	# Try Connecting to the Carbon Server
+-	if $config->{carbon_server} ne "" {
++	if ($config->{carbon_server} ne "") {
+ 		DEBUG "[DEBUG] Connecting to Carbon Server $config->{carbon_server}:$config->{carbon_port}...";
+ 		$self->{carbon_socket} = IO::Socket::INET->new (
+ 				PeerAddr => $config->{carbon_server},
+@@ -601,9 +601,9 @@ sub _update_carbon_server {
+ 
+ 	for my $service (keys %{$nested_service_config->{data_source}}) {
+ 		my $service_config = $nested_service_config->{data_source}{$service};
+-		my $service_data   = $nested_sercice_data->{$service};
++		my $service_data   = $nested_service_data->{$service};
+ 
+-		for my $ds_name (keys ${$service_config}) {
++		for my $ds_name (keys %{$service_config}) {
+ 			my $ds_config = $service_config->{$ds_name};
+ 
+ 			unless (defined($ds_config->{label})) {
+@@ -617,7 +617,7 @@ sub _update_carbon_server {
+ 				next unless defined ($values);
+ 				for (my $i = 0; $i < scalar @$values; $i++) {
+ 					my $value = $values->[$i];
+-					my $when  = $ds_values->{when}[$i];
++					my $when  = $service_data->{$ds_name}{when}[$i];
+ 
+ 					if ($value =~ /\d[Ee]([+-]?\d+)$/) {
+ 						# Looks like scientific format. I don't know how Carbon
+diff --git a/t/munin_master_config.t b/t/munin_master_config.t
+index a771867a..2d3a0539 100644
+--- a/master/t/munin_master_config.t
++++ b/master/t/munin_master_config.t
+@@ -24,6 +24,9 @@ my $fasit = {
+     },
+ 
+     config => {
++		carbon_server   => "localhost",
++		carbon_port     => "2003",
++		carbon_prefix   => "",
+         config_file     => "$Munin::Common::Defaults::MUNIN_CONFDIR/munin.conf",
+         dbdir           => '/opt/munin/sandbox/var/opt/munin',
+         debug           => 0,
+-- 
+2.16.2
+

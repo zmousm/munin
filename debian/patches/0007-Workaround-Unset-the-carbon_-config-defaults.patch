@@ -1,0 +1,30 @@
+From b7270ef18b5b4eba50128e740cf577a169b53d8a Mon Sep 17 00:00:00 2001
+From: Stig Sandbeck Mathisen <ssm@fnord.no>
+Date: Thu, 21 May 2015 20:43:00 +0200
+Subject: [PATCH] Workaround: Unset the carbon_ config defaults
+
+The carbon_* defaults makes munin-update assume a present carbon server,
+and it will crash when that is not present.  This makes munin-update run
+with the default configuration, but a proper bugfix is needed.
+---
+ master/lib/Munin/Master/Config.pm | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/master/lib/Munin/Master/Config.pm b/master/lib/Munin/Master/Config.pm
+index 12168207..3e5261c9 100644
+--- a/master/lib/Munin/Master/Config.pm
++++ b/master/lib/Munin/Master/Config.pm
+@@ -140,8 +140,8 @@ my %booleans = map {$_ => 1} qw(
+ 	    root_instance => 1, 
+ 
+ 	    config      => bless ( {
+-		carbon_server    => "localhost",
+-		carbon_port      => "2003",
++		carbon_server    => "",
++		carbon_port      => "",
+ 		carbon_prefix    => "",
+ 		config_file      => "$Munin::Common::Defaults::MUNIN_CONFDIR/munin.conf",
+ 		dbdir            => $Munin::Common::Defaults::MUNIN_DBDIR,
+-- 
+2.16.2
+

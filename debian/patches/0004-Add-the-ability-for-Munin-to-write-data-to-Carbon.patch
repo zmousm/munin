@@ -1,0 +1,169 @@
+From 0c9f62856bb28e4d7006164303b0a79d08081b5f Mon Sep 17 00:00:00 2001
+From: Darac Marjal <darac@darac.org.uk>
+Date: Sat, 4 Apr 2015 11:18:47 +0100
+Subject: [PATCH] Add the ability for Munin to write data to Carbon
+
+New config options "carbon_server", "carbon_port" and "carbon_prefix"
+---
+ common/lib/Munin/Common/Config.pm       |  3 ++
+ master/lib/Munin/Master/Config.pm       |  3 ++
+ master/lib/Munin/Master/UpdateWorker.pm | 82 ++++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 85 insertions(+), 3 deletions(-)
+
+diff --git a/common/lib/Munin/Common/Config.pm b/common/lib/Munin/Common/Config.pm
+index c2bf6e4f..ea83c27f 100644
+--- a/common/lib/Munin/Common/Config.pm
++++ b/common/lib/Munin/Common/Config.pm
+@@ -15,6 +15,9 @@ use English qw(-no_match_vars);
+ my %legal = map { $_ => 1 } qw(
+ 	address
+ 	always_send
++	carbon_server
++	carbon_port
++	carbon_prefix
+ 	category_order
+ 	cdef
+ 	cdef_name
+diff --git a/master/lib/Munin/Master/Config.pm b/master/lib/Munin/Master/Config.pm
+index ca1301ce..d8044816 100644
+--- a/master/lib/Munin/Master/Config.pm
++++ b/master/lib/Munin/Master/Config.pm
+@@ -140,6 +140,9 @@ my %booleans = map {$_ => 1} qw(
+ 	    root_instance => 1, 
+ 
+ 	    config      => bless ( {
++		carbon_server    => "localhost",
++		carbon_port      => "2003",
++		carbon_prefix    => "",
+ 		config_file      => "$Munin::Common::Defaults::MUNIN_CONFDIR/munin.conf",
+ 		dbdir            => $Munin::Common::Defaults::MUNIN_DBDIR,
+ 		debug            => 0,
+diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
+index 40922d80..b70ac380 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -13,6 +13,7 @@ use Log::Log4perl qw( :easy );
+ use File::Basename;
+ use File::Path;
+ use File::Spec;
++use IO::Socket::INET;
+ use Munin::Master::Config;
+ use Munin::Master::Node;
+ use Munin::Master::Utils;
+@@ -20,7 +21,7 @@ use RRDs;
+ use Time::HiRes;
+ use Data::Dumper;
+ use Scalar::Util qw(weaken);
+-    
++
+ use List::Util qw(max);
+ 
+ my $config = Munin::Master::Config->instance()->{config};
+@@ -81,6 +82,17 @@ sub do_work {
+ 	global => {},
+ 	);
+ 
++	# Try Connecting to the Carbon Server
++	if $config->{carbon_server} ne "" {
++		DEBUG "[DEBUG] Connecting to Carbon Server $config->{carbon_server}:$config->{carbon_port}...";
++		$self->{carbon_socket} = IO::Socket::INET->new (
++				PeerAddr => $config->{carbon_server},
++				PeerPort => $config->{carbon_port},
++				Proto    => 'tcp',
++		) or WARN "[WARN] Couldn't connect to Carbon Server: $!";
++	}
++
++
+     INFO "[INFO] starting work in $$ for $nodedesignation.\n";
+     my $done = $self->{node}->do_in_session(sub {
+ 
+@@ -224,7 +236,8 @@ sub do_work {
+ 		    %{$service_config{global}});
+ 
+ 		my $last_updated_timestamp = $self->_update_rrd_files(\%service_config, \%service_data);
+-          	$self->set_spoolfetch_timestamp($last_updated_timestamp);
++		$self->_update_carbon_server(\%service_config, \%service_data);
++		$self->set_spoolfetch_timestamp($last_updated_timestamp);
+ 	    } # for @plugins
+ 
+ 	    # Send "quit" to node
+@@ -247,6 +260,9 @@ sub do_work {
+ 	    return;
+ 	}
+ 
++	DEBUG "[DEBUG] Closing Carbon socket";
++	$self->{carbon_socket}->close if exists $self->{carbon_socket};
++
+ 	# Everything went smoothly.
+ 	DEBUG "[DEBUG] Everything went smoothly.";
+ 	return 1;
+@@ -567,6 +583,66 @@ sub _ensure_tuning {
+     return $success;
+ }
+ 
++sub _update_carbon_server {
++	my ($self, $nested_service_config, $nested_service_data) = @_;
++
++	my $metric_path;
++
++	return unless exists $self->{carbon_socket};
++
++	if ($config->{carbon_prefix} ne "") {
++		$metric_path .= $config->{carbon_prefix};
++		if ($config->{carbon_prefix} !~ /\.$/) {
++			$metric_path .= '.';
++		}
++	}
++
++	$metric_path .= $self->{host}{host_name} . ".";
++
++	for my $service (keys %{$nested_service_config->{data_source}}) {
++		my $service_config = $nested_service_config->{data_source}{$service};
++		my $service_data   = $nested_sercice_data->{$service};
++
++		for my $ds_name (keys ${$service_config}) {
++			my $ds_config = $service_config->{$ds_name};
++
++			unless (defined($ds_config->{label})) {
++				# _update_rrd_files will already have warned about this so silently move on
++				next;
++			}
++
++	    	if (defined($service_data) and defined($service_data->{$ds_name})) {
++				# $self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}));
++				my $values = $service_data->{$ds_name}{value};
++				next unless defined ($values);
++				for (my $i = 0; $i < scalar @$values; $i++) {
++					my $value = $values->[$i];
++					my $when  = $ds_values->{when}[$i];
++
++					if ($value =~ /\d[Ee]([+-]?\d+)$/) {
++						# Looks like scientific format. I don't know how Carbon
++						# handles that, but convert it anyway so it gets the same
++						# data as RRDtool
++						my $magnitude = $1;
++						if ($magnitude < 0) {
++							# Preserve at least 4 significant digits
++							$magnitude = abs($magnitude) + 4;
++							$value = sprintf("%.*f", $magnitude, $value);
++						} else {
++							$value = sprintf("%.4f", $value);
++						}
++					}
++
++					$self->{carbon_socket}->print("${metric_path}.$service.$ds_name $value $when");
++
++			} else {
++				# Again, _update_rrd_files will have warned
++			}
++		}
++	}
++}
++
++
+ 
+ sub _update_rrd_files {
+     my ($self, $nested_service_config, $nested_service_data) = @_;
+-- 
+2.16.2
+
