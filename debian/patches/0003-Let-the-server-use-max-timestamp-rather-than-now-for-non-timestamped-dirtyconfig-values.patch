@@ -1,0 +1,106 @@
+From bd8b7cc10fabb0d073ab074a14e1edf4b5b87313 Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Wed, 21 Mar 2018 13:37:42 +0200
+Subject: [PATCH] Let the server use max timestamp rather than now for
+ non-timestamped dirtyconfig values
+
+* Use special value -1 rather than $now for when field for dirtyconfig output
+* Pre-compute $last_timestamp, in a separate iteration
+  * Fall back to current timestamp
+* If special value found in when field, use $last_timestamp instead
+* Munin::Master::UpdateWorker::_update_rrd_file now returns number of
+  RRD updates and $last_timestamp is an argument
+---
+ master/lib/Munin/Master/Node.pm         |  5 +----
+ master/lib/Munin/Master/UpdateWorker.pm | 24 ++++++++++++++++++++----
+ 2 files changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/master/lib/Munin/Master/Node.pm b/master/lib/Munin/Master/Node.pm
+index fcacff7f..c00a3564 100644
+--- a/master/lib/Munin/Master/Node.pm
++++ b/master/lib/Munin/Master/Node.pm
+@@ -312,9 +312,6 @@ sub parse_service_config {
+ 
+     new_service($service);
+ 
+-    # every 'N' has the same value. Should not take parsing time into the equation
+-    my $now = time;
+-
+     for my $line (@$lines) {
+ 
+ 	DEBUG "[CONFIG from $plugin] $line" if $debug;
+@@ -362,7 +359,7 @@ sub parse_service_config {
+         } elsif ($line =~ m{\A ([^\.]+)\.value \s+ (.+?) \s* $}xms) {
+ 	    $correct++;
+ 	    # Special case for dirtyconfig
+-            my ($ds_name, $value, $when) = ($1, $2, $now);
++            my ($ds_name, $value, $when) = ($1, $2, -1);
+             
+ 	    $ds_name = $self->_sanitise_fieldname($ds_name);
+ 	    if ($value =~ /^(\d+):(.+)$/) {
+diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
+index 645deeb0..7560949f 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -574,7 +574,19 @@ sub _update_rrd_files {
+     my $nodedesignation = $self->{host}{host_name}."/".
+ 	$self->{host}{address}.":".$self->{host}{port};
+ 
+-    my $last_timestamp = 0;
++    my $last_timestamp =
++    	max(0,
++    	    map {
++    		my $svc = $_;
++    		map {
++    		    my $ds = $_;
++    		    @{$nested_service_data->{$svc}->{$ds}->{when} || []};
++    		} keys %{$nested_service_config->{data_source}{$svc}};
++    	    } keys %{$nested_service_config->{data_source}}
++    	);
++    if (not $last_timestamp > 0) {
++    	$last_timestamp = time;
++    }
+ 
+     for my $service (keys %{$nested_service_config->{data_source}}) {
+ 
+@@ -608,7 +620,7 @@ sub _update_rrd_files {
+ 	    my $rrd_file = $self->_create_rrd_file_if_needed($service, $ds_name, $ds_config, $first_epoch);
+ 
+ 	    if (defined($service_data) and defined($service_data->{$ds_name})) {
+-		$last_timestamp = max($last_timestamp, $self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}));
++		$self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}, $last_timestamp);
+ 	    }
+ 	    else {
+ 		WARN "[WARNING] Service $service on $nodedesignation returned no data for label $ds_name";
+@@ -848,7 +860,7 @@ sub to_mul_nb {
+ }
+ 
+ sub _update_rrd_file {
+-    my ($self, $rrd_file, $ds_name, $ds_values) = @_;
++    my ($self, $rrd_file, $ds_name, $ds_values, $last_timestamp) = @_;
+ 
+     my $values = $ds_values->{value};
+ 
+@@ -874,6 +886,10 @@ sub _update_rrd_file {
+         my $value = $values->[$i];
+         my $when = $ds_values->{when}[$i];
+ 
++	if ($when == -1) {
++	    $when = $last_timestamp;
++	}
++
+ 	# Ignore values that is not in monotonic increasing timestamp for the RRD.
+ 	# Otherwise it will reject the whole update
+ 	next if ($current_updated_timestamp && $when <= $current_updated_timestamp);
+@@ -926,7 +942,7 @@ sub _update_rrd_file {
+     $self->{state}{value}{"$rrd_file:42"}{current} = [ $current_updated_timestamp, $current_updated_value ]; 
+     $self->{state}{value}{"$rrd_file:42"}{previous} = [ $previous_updated_timestamp, $previous_updated_value ]; 
+ 
+-    return $current_updated_timestamp;
++    return scalar @update_rrd_data;
+ }
+ 
+ sub dump_to_file
+-- 
+2.16.2
+
