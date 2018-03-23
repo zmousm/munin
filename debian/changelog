@@ -1,3 +1,9 @@
+munin (2.0.35-1~bpo9+grnet+3) stretch-backports; urgency=medium
+
+  * Rebuild for stretch-backports.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 23 Mar 2018 15:25:26 +0200
+
 munin (2.0.35-1~grnet+3) unstable; urgency=medium
 
   * Add debian/patches/0002-Simplify-spooled-value-regex.patch
