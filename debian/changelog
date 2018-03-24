@@ -1,8 +1,8 @@
-munin (2.0.35-1~bpo8+grnet+3) jessie-backports; urgency=medium
+munin (2.0.35-1~bpo7+grnet+3) wheezy-backports; urgency=medium
 
-  * Rebuild for jessie-backports.
+  * Rebuild for wheezy-backports.
 
- -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Sat, 24 Mar 2018 08:47:46 +0200
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Sat, 24 Mar 2018 08:59:57 +0200
 
 munin (2.0.35-1~grnet+3) unstable; urgency=medium
 
