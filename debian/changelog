@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo7+grnet+2) wheezy-backports; urgency=medium
+
+  * Build-Depends-Indep: Switch from openjdk-8-jdk to openjdk-7-jdk as wheezy can not satisfy the former
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Mon, 26 Mar 2018 01:28:52 +0300
+
 munin (2.0.36-1~bpo7+grnet+1) wheezy-backports; urgency=medium
 
   * Rebuild for wheezy-backports.
