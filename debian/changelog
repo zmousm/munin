@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo8+grnet+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Mon, 26 Mar 2018 00:58:37 +0300
+
 munin (2.0.36-1~grnet+1) unstable; urgency=medium
 
   * Drop debian/patches/0002-Simplify-spooled-value-regex.patch, merged upstream
