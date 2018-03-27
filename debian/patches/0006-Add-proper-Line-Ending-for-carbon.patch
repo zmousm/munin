@@ -50,8 +50,8 @@ index 1edbea4a..10eadec0 100644
 +					DEBUG "[DEBUG] Sending ${metric_path}$service.$ds_name to Carbon";
 +					$self->{carbon_socket}->print("${metric_path}$service.$ds_name $value $when\n");
  
- 			} else {
- 				# Again, _update_rrd_files will have warned
+ 				}
+ 
 -- 
 2.16.2
 
