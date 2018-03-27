@@ -1,8 +1,9 @@
 0001-Pass-I.-to-Build-so-that-it-will-work-without-.-in-I.patch
 0002-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
 0003-Add-the-ability-for-Munin-to-write-data-to-Carbon.patch
-0004-Update-and-pass-tests.patch
-0005-Add-proper-Line-Ending-for-carbon.patch
-0006-Workaround-Unset-the-carbon_-config-defaults.patch
-0007-Update-tests-for-the-carbon_-variables.patch
-0008-update-do-handle-undefined-carbon-server.patch
+0004-Clean-up-most-of-the-perlcritic-errors.patch
+0005-Update-and-pass-tests.patch
+0006-Add-proper-Line-Ending-for-carbon.patch
+0007-Workaround-Unset-the-carbon_-config-defaults.patch
+0008-Update-tests-for-the-carbon_-variables.patch
+0009-update-do-handle-undefined-carbon-server.patch

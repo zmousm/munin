@@ -1,0 +1,23 @@
+From c808f5f7ab3498680ad40e4b859e4700dd964688 Mon Sep 17 00:00:00 2001
+From: Darac Marjal <darac@darac.org.uk>
+Date: Sat, 4 Apr 2015 11:28:33 +0100
+Subject: [PATCH] Clean up most of the perlcritic errors
+
+Backport to stable-2.0 keeping only the one relevant hunk
+---
+ munin/master/lib/Munin/Master/UpdateWorker.pm |    2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/Munin/Master/UpdateWorker.pm b/lib/Munin/Master/UpdateWorker.pm
+index b70ac380..2f7413a4 100644
+--- a/master/lib/Munin/Master/UpdateWorker.pm
++++ b/master/lib/Munin/Master/UpdateWorker.pm
+@@ -635,6 +635,8 @@ sub _update_carbon_server {
+ 
+ 					$self->{carbon_socket}->print("${metric_path}.$service.$ds_name $value $when");
+ 
++				}
++
+ 			} else {
+ 				# Again, _update_rrd_files will have warned
+ 			}
