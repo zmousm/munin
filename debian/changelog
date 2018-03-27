@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo8+grnet+2) jessie-backports; urgency=medium
+
+  * Add missing carbon patch debian/patches/0004-Clean-up-most-of-the-perlcritic-errors.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Wed, 28 Mar 2018 00:29:50 +0300
+
 munin (2.0.36-1~bpo8+grnet+1) jessie-backports; urgency=medium
 
   * Rebuild for jessie-backports.
