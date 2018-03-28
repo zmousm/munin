@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo8+grnet+3) jessie-backports; urgency=medium
+
+  * Add 3 backported patches that help fix/debug munin-asyncd timing behavior
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Wed, 28 Mar 2018 13:21:46 +0300
+
 munin (2.0.36-1~bpo8+grnet+2) jessie-backports; urgency=medium
 
   * Add missing carbon patch debian/patches/0004-Clean-up-most-of-the-perlcritic-errors.patch
