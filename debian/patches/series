@@ -7,3 +7,6 @@
 0007-Workaround-Unset-the-carbon_-config-defaults.patch
 0008-Update-tests-for-the-carbon_-variables.patch
 0009-update-do-handle-undefined-carbon-server.patch
+0010-Run-munin-asyncd-fetching-on-wall-clock-type.patch
+0011-asyncd-fix-the-1h-sleep.patch
+0012-More-logging-for-munin-asyncd-aimed-at-fixing-the-1h.patch
