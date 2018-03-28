@@ -16,14 +16,14 @@ index 754d1a07..c4f72e6b 100755
  			$when_next = $should_be_next;
  		}
  
-+		DEBUG("[$$][$process_name] $plugin: should_have_been $should_have_been (" .
++		print STDERR "[$$][$process_name] $plugin: should_have_been $should_have_been (" .
 +			localtime($should_have_been) .
 +			"), should_be_next: $should_be_next (" .
 +			localtime($should_be_next) .
 +			"), when: $when (" .
 +			localtime($when) .
 +			"), when_next: $when_next (" .
-+			localtime($when_next) . ")" );
++			localtime($when_next) . ")\n" if $debug;
 +
  		if ($do_fork && fork()) {
  			# parent, return directly
