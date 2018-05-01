@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo7+grnet+6) wheezy-backports; urgency=medium
+
+  * Revert debian/munin-node.triggers: interest-await -> interest
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Tue, 01 May 2018 09:57:46 +0300
+
 munin (2.0.36-1~bpo7+grnet+5) wheezy-backports; urgency=medium
 
   * Fix debian/patches/0012-More-logging-for-munin-asyncd-aimed-at-fixing-the-1h.patch
