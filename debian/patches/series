@@ -10,3 +10,6 @@
 0010-Run-munin-asyncd-fetching-on-wall-clock-type.patch
 0011-asyncd-fix-the-1h-sleep.patch
 0012-More-logging-for-munin-asyncd-aimed-at-fixing-the-1h.patch
+0013-munin-cgi-graph-only-remove-rendered-graphs-if-QUERY_STRING-present.patch
+0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
+0015-add-munin-html-navbar.patch

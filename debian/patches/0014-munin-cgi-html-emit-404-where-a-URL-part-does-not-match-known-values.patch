@@ -1,0 +1,216 @@
+From bb928f5e4d05b21902bc33140dbe69834b8ad24e Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Tue, 29 May 2018 15:32:12 +0300
+Subject: [PATCH 2/3] munin-cgi-html: emit 404 where a URL part does not match
+ known values
+
+* adjust url part matching functions as necessary
+  * get_global_category
+  * get_node_service
+* delegate handling headers to new function emit_header
+  * default to utf-8 charset
+  * send X-munin-pid like munin-cgi-graph
+  * status param defaults to 200
+  * call this function before any emit_* (a decorator would be nice)
+* handle CGI_DEBUG env var like munin-cgi-graph
+* add Munin::Master::HTMLOld::emit_404_template
+  * based on emit_main_index
+  * renders $tmpldir/munin-404.tmpl (to 404.html -- hack)
+---
+ master/_bin/munin-cgi-html.in      | 46 ++++++++++++++++++++++++++++++++----
+ master/lib/Munin/Master/HTMLOld.pm | 48 +++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 88 insertions(+), 6 deletions(-)
+
+diff --git a/master/_bin/munin-cgi-html.in b/master/_bin/munin-cgi-html.in
+index bbc9d066..17e5084d 100755
+--- a/master/_bin/munin-cgi-html.in
++++ b/master/_bin/munin-cgi-html.in
+@@ -47,11 +47,12 @@ my $lastchanged = 0;
+ my @params;
+ push @params, "--config", $ENV{'MUNIN_CONFIG'}
+         if (defined $ENV{'MUNIN_CONFIG'});
++push @params, "--debug"
++        if (defined $ENV{'CGI_DEBUG'});
+ 
+ # grab config
+ html_startup(\@params);
+ while(new CGI::Fast){
+-	print header("text/html");
+ 	$config = get_config(1);
+ 	show_page();
+ }
+@@ -61,6 +62,17 @@ sub show_page {
+   emit_page(\@path);
+ }
+ 
++sub emit_header {
++  my $status = shift || 200;
++  my $headers = {
++    -charset => 'utf-8',
++    -status  => $status eq '404' ?
++      '404 Not Found' : $status,
++    'X-Munin-Pid' => $$,
++  };
++  print header($headers);
++}
++
+ sub get_next_part {
+   my $path = shift;
+   my $part;
+@@ -73,6 +85,7 @@ sub get_next_part {
+ sub emit_page {
+   my $path = shift;
+   my $group = $config;
++  my $re_part_other = qr/^(index\.html|)$/;
+ 
+   #process groups
+   $group = traverse_groups($path, $group);
+@@ -81,29 +94,52 @@ sub emit_page {
+   if(!defined $group->{"depth"} || $group->{"depth"} == 0){ #root url
+ 	my $problems = get_next_part($path);
+ 	if(defined $problems && $problems eq "problems.html"){
++		emit_header();
+ 		emit_problem_template(1);
+ 	} else {
+ 		unshift(@$path, $problems);
+ 		(my $category, my $time) = get_global_category($path, $group);
+-		if(defined $category){
++		if(defined $category && defined $time){
++			emit_header();
+ 			emit_category_template($category, $time, 1);
+ 		} else {
++		  if (!defined $category || $category =~ $re_part_other) {
++			emit_header();
+ 			emit_main_index($group->{"groups"},0,1);
++		  } else {
++			emit_header(404);
++			emit_404_template(1);
++		  }
+ 		}
+ 	}
+   } elsif(!$group->{"ncategories"}) { # group
+ 	my $cmp_time = get_comparison_group($path, $group);
+ 	if(defined $cmp_time){ # comparison template
++		emit_header();
+ 		emit_comparison_template($group, $cmp_time, 1);
+ 	} else { #group page
++	  my $part = get_next_part($path);
++	  if (defined $part && $part =~ $re_part_other) {
++		emit_header();
+ 		emit_group_template($group, 1);
++	  } else {
++		emit_header(404);
++		emit_404_template(1);
++	  }
+ 	}
+   } else { #node
+ 	my $service = get_node_service($path, $group);
+-	if(defined $service){
++	if(defined $service && ref $service eq "HASH"){
++		emit_header();
+ 		emit_service_template($service, 1);
+ 	} else {
++	  if (!defined $service || $service =~ $re_part_other) {
++		emit_header();
+ 		emit_graph_template($group, 1);
++	  } else {
++		emit_header(404);
++		emit_404_template(1);
++	  }
+ 	}
+   } 
+ }
+@@ -147,7 +183,7 @@ sub get_global_category {
+ 			}
+ 		}
+ 	}
+-	return undef;
++	return $part;
+ }
+ 
+ sub get_node_service {
+@@ -163,7 +199,7 @@ sub get_node_service {
+ 			}
+ 		}
+ 	}
+-	return undef;
++	return $part;
+ }
+ 
+ # CGI in perl 5.20 is now seriously broken as it doesn't import into the namespace.
+diff --git a/master/lib/Munin/Master/HTMLOld.pm b/master/lib/Munin/Master/HTMLOld.pm
+index 335b97d9..1249c71d 100644
+--- a/master/lib/Munin/Master/HTMLOld.pm
++++ b/master/lib/Munin/Master/HTMLOld.pm
+@@ -65,7 +65,7 @@ use Exporter;
+ 
+ our (@ISA, @EXPORT);
+ @ISA    = qw(Exporter);
+-@EXPORT = qw(html_startup html_main get_config emit_main_index emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
++@EXPORT = qw(html_startup html_main get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
+ 
+ use HTML::Template;
+ use POSIX qw(strftime);
+@@ -227,6 +227,7 @@ sub html_main {
+     generate_group_templates($groups);
+     generate_category_templates($htmlconfig->{"globalcats"});
+     emit_main_index($groups,$timestamp,0);
++    emit_404_template(0);
+     emit_problem_template(0);
+ 
+     INFO "[INFO] Releasing lock file $lockfile";
+@@ -710,6 +711,51 @@ sub emit_main_index {
+ 	}
+ }
+ 
++sub emit_404_template {
++    # Draw 404 page
++    my ($emit_to_stdout, $message) = @_;
++
++    my $template = HTML::Template->new(
++        filename          => "$tmpldir/munin-404.tmpl",
++        die_on_bad_params => 0,
++        loop_context_vars => 1,
++		global_vars       => 1,
++		filter            => sub {
++		    my $ref = shift;
++	    	$$ref =~ s/URLX/URL0/g;
++		},
++    );
++
++    $template->param(
++	MESSAGE => $message || 'Page not found',
++                    TAGLINE   => $htmltagline,
++                    CSS_NAME  => get_css_name(),
++					R_PATH => "",
++			  	    MUNIN_VERSION => $Munin::Common::Defaults::MUNIN_VERSION,
++					TIMESTAMP	=> $timestamp,
++					NGLOBALCATS => $htmlconfig->{"nglobalcats"},
++					GLOBALCATS => $htmlconfig->{"globalcats"},
++					  NCRITICAL => scalar(@{$htmlconfig->{"problems"}->{"criticals"}}),
++					  NWARNING => scalar(@{$htmlconfig->{"problems"}->{"warnings"}}),
++					  NUNKNOWN => scalar(@{$htmlconfig->{"problems"}->{"unknowns"}}),
++    );
++	if($emit_to_stdout){
++		print $template->output;
++	} else {
++	    my $filename = munin_get_html_filename($config);
++	    # hack for 404
++	    $filename =~ s/index\.html$/404.html/;
++		ensure_dir_exists($filename);
++
++	    DEBUG "[DEBUG] Creating 404 page $filename";
++
++    	open(my $FILE, '>', $filename)
++        	or die "Cannot open $filename for writing: $!";
++	    print $FILE $template->output;
++    	close $FILE;
++	}
++}
++
+ 
+ sub copy_web_resources {
+     my ($staticdir, $htmldir) = @_;
+-- 
+2.11.0
+
