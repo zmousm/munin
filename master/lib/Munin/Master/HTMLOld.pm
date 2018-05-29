@@ -65,7 +65,7 @@ use Exporter;
 
 our (@ISA, @EXPORT);
 @ISA    = qw(Exporter);
-@EXPORT = qw(html_startup html_main get_config emit_main_index emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
+@EXPORT = qw(html_startup html_main get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
 
 use HTML::Template;
 use POSIX qw(strftime);
@@ -227,6 +227,7 @@ sub html_main {
     generate_group_templates($groups);
     generate_category_templates($htmlconfig->{"globalcats"});
     emit_main_index($groups,$timestamp,0);
+    emit_404_template(0);
     emit_problem_template(0);
 
     INFO "[INFO] Releasing lock file $lockfile";
@@ -702,6 +703,51 @@ sub emit_main_index {
 		ensure_dir_exists($filename);
 
 	    DEBUG "[DEBUG] Creating main index $filename";
+
+    	open(my $FILE, '>', $filename)
+        	or die "Cannot open $filename for writing: $!";
+	    print $FILE $template->output;
+    	close $FILE;
+	}
+}
+
+sub emit_404_template {
+    # Draw 404 page
+    my ($emit_to_stdout, $message) = @_;
+
+    my $template = HTML::Template->new(
+        filename          => "$tmpldir/munin-404.tmpl",
+        die_on_bad_params => 0,
+        loop_context_vars => 1,
+		global_vars       => 1,
+		filter            => sub {
+		    my $ref = shift;
+	    	$$ref =~ s/URLX/URL0/g;
+		},
+    );
+
+    $template->param(
+	MESSAGE => $message || 'Page not found',
+                    TAGLINE   => $htmltagline,
+                    CSS_NAME  => get_css_name(),
+					R_PATH => "",
+			  	    MUNIN_VERSION => $Munin::Common::Defaults::MUNIN_VERSION,
+					TIMESTAMP	=> $timestamp,
+					NGLOBALCATS => $htmlconfig->{"nglobalcats"},
+					GLOBALCATS => $htmlconfig->{"globalcats"},
+					  NCRITICAL => scalar(@{$htmlconfig->{"problems"}->{"criticals"}}),
+					  NWARNING => scalar(@{$htmlconfig->{"problems"}->{"warnings"}}),
+					  NUNKNOWN => scalar(@{$htmlconfig->{"problems"}->{"unknowns"}}),
+    );
+	if($emit_to_stdout){
+		print $template->output;
+	} else {
+	    my $filename = munin_get_html_filename($config);
+	    # hack for 404
+	    $filename =~ s/index\.html$/404.html/;
+		ensure_dir_exists($filename);
+
+	    DEBUG "[DEBUG] Creating 404 page $filename";
 
     	open(my $FILE, '>', $filename)
         	or die "Cannot open $filename for writing: $!";

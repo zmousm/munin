@@ -47,11 +47,12 @@ my $lastchanged = 0;
 my @params;
 push @params, "--config", $ENV{'MUNIN_CONFIG'}
         if (defined $ENV{'MUNIN_CONFIG'});
+push @params, "--debug"
+        if (defined $ENV{'CGI_DEBUG'});
 
 # grab config
 html_startup(\@params);
 while(new CGI::Fast){
-	print header("text/html");
 	$config = get_config(1);
 	show_page();
 }
@@ -59,6 +60,17 @@ while(new CGI::Fast){
 sub show_page {
   my @path = split(/\//, $ENV{PATH_INFO});
   emit_page(\@path);
+}
+
+sub emit_header {
+  my $status = shift || 200;
+  my $headers = {
+    -charset => 'utf-8',
+    -status  => $status eq '404' ?
+      '404 Not Found' : $status,
+    'X-Munin-Pid' => $$,
+  };
+  print header($headers);
 }
 
 sub get_next_part {
@@ -73,6 +85,7 @@ sub get_next_part {
 sub emit_page {
   my $path = shift;
   my $group = $config;
+  my $re_part_other = qr/^(index\.html|)$/;
 
   #process groups
   $group = traverse_groups($path, $group);
@@ -81,29 +94,52 @@ sub emit_page {
   if(!defined $group->{"depth"} || $group->{"depth"} == 0){ #root url
 	my $problems = get_next_part($path);
 	if(defined $problems && $problems eq "problems.html"){
+		emit_header();
 		emit_problem_template(1);
 	} else {
 		unshift(@$path, $problems);
 		(my $category, my $time) = get_global_category($path, $group);
-		if(defined $category){
+		if(defined $category && defined $time){
+			emit_header();
 			emit_category_template($category, $time, 1);
 		} else {
+		  if (!defined $category || $category =~ $re_part_other) {
+			emit_header();
 			emit_main_index($group->{"groups"},0,1);
+		  } else {
+			emit_header(404);
+			emit_404_template(1);
+		  }
 		}
 	}
   } elsif(!$group->{"ncategories"}) { # group
 	my $cmp_time = get_comparison_group($path, $group);
 	if(defined $cmp_time){ # comparison template
+		emit_header();
 		emit_comparison_template($group, $cmp_time, 1);
 	} else { #group page
+	  my $part = get_next_part($path);
+	  if (defined $part && $part =~ $re_part_other) {
+		emit_header();
 		emit_group_template($group, 1);
+	  } else {
+		emit_header(404);
+		emit_404_template(1);
+	  }
 	}
   } else { #node
 	my $service = get_node_service($path, $group);
-	if(defined $service){
+	if(defined $service && ref $service eq "HASH"){
+		emit_header();
 		emit_service_template($service, 1);
 	} else {
+	  if (!defined $service || $service =~ $re_part_other) {
+		emit_header();
 		emit_graph_template($group, 1);
+	  } else {
+		emit_header(404);
+		emit_404_template(1);
+	  }
 	}
   } 
 }
@@ -147,7 +183,7 @@ sub get_global_category {
 			}
 		}
 	}
-	return undef;
+	return $part;
 }
 
 sub get_node_service {
@@ -163,7 +199,7 @@ sub get_node_service {
 			}
 		}
 	}
-	return undef;
+	return $part;
 }
 
 # CGI in perl 5.20 is now seriously broken as it doesn't import into the namespace.
