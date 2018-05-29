@@ -1,3 +1,12 @@
+munin (2.0.36-1~bpo7+grnet+7) wheezy-backports; urgency=medium
+
+  * Add debian/patches
+    * 0013-munin-cgi-graph-only-remove-rendered-graphs-if-QUERY_STRING-present.patch
+    * 0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
+    * 0015-add-munin-html-navbar.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Tue, 29 May 2018 18:38:36 +0300
+
 munin (2.0.36-1~bpo7+grnet+6) wheezy-backports; urgency=medium
 
   * Revert debian/munin-node.triggers: interest-await -> interest
