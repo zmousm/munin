@@ -1,0 +1,201 @@
+From 6ec9ad84ea68dace47782572fcf5a0fe0293e661 Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Tue, 29 May 2018 16:14:09 +0300
+Subject: [PATCH 3/3] add munin-html-navbar: like munin-html but only renders a
+ partial navbar template
+
+* add Munin::Master::HTMLOld::html_navbar, like html_main
+* add Munin::Master::HTMLOld::emit_navbar
+  * based on emit_main_index
+  * renders $tmpldir/$navbar_template.tmpl (to navbar.html -- hack)
+* register new config directives:
+  * html_navbar: boolean, enable generation despite html_strategy=cgi
+  * navbar_template: specify a template different from the default
+    (partial/navbar)
+---
+ Makefile                           |   1 +
+ common/lib/Munin/Common/Config.pm  |   2 +
+ master/_bin/munin-html-navbar.in   |  15 ++++++
+ master/lib/Munin/Master/HTMLOld.pm | 105 ++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 122 insertions(+), 1 deletion(-)
+ create mode 100644 master/_bin/munin-html-navbar.in
+
+diff --git a/Makefile b/Makefile
+index 9fd144c6..92b8971a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -116,6 +116,7 @@ install-master-prime: $(INFILES_MASTER) install-pre install-master
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-check $(BINDIR)/
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-update $(LIBDIR)/
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-html $(LIBDIR)/
++	$(INSTALL) -m 0755 build/master/_bin/munin-html-navbar $(LIBDIR)/
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-graph $(LIBDIR)/
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-limits $(LIBDIR)/
+ 	$(INSTALL) -m 0755 build/master/_bin/munin-datafile2storable $(LIBDIR)/
+diff --git a/common/lib/Munin/Common/Config.pm b/common/lib/Munin/Common/Config.pm
+index cba890b5..db0e3be5 100644
+--- a/common/lib/Munin/Common/Config.pm
++++ b/common/lib/Munin/Common/Config.pm
+@@ -65,6 +65,8 @@ my %legal = map { $_ => 1 } qw(
+ 	htmldir
+ 	html_rename
+ 	html_strategy
++	html_navbar
++	navbar_template
+ 	includedir
+ 	info
+ 	label
+diff --git a/master/_bin/munin-html-navbar.in b/master/_bin/munin-html-navbar.in
+new file mode 100644
+index 00000000..5451d783
+--- /dev/null
++++ b/master/_bin/munin-html-navbar.in
+@@ -0,0 +1,15 @@
++#!@@PERL@@
++# -*- cperl -*-
++
++use warnings;
++use strict;
++
++use Munin::Master::HTMLOld;
++
++$|=1;
++
++html_startup(\@ARGV);
++
++html_navbar();
++
++1;
+diff --git a/master/lib/Munin/Master/HTMLOld.pm b/master/lib/Munin/Master/HTMLOld.pm
+index 1249c71d..9fba31e4 100644
+--- a/master/lib/Munin/Master/HTMLOld.pm
++++ b/master/lib/Munin/Master/HTMLOld.pm
+@@ -65,7 +65,7 @@ use Exporter;
+ 
+ our (@ISA, @EXPORT);
+ @ISA    = qw(Exporter);
+-@EXPORT = qw(html_startup html_main get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
++@EXPORT = qw(html_startup html_main html_navbar get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
+ 
+ use HTML::Template;
+ use POSIX qw(strftime);
+@@ -239,6 +239,53 @@ sub html_main {
+     INFO "[INFO] munin-html finished ($update_time sec)";
+ }
+ 
++sub html_navbar {
++    my $configtime = Time::HiRes::time;
++    get_config(0);
++    my $groups = $htmlconfig;
++    $configtime = sprintf("%.2f", (Time::HiRes::time - $configtime));
++    INFO "[INFO] config generated ($configtime sec)";
++
++    if (munin_get($config,"html_strategy","cron") eq "cgi" &&
++        !munin_get_bool($config,"html_navbar",0)){
++    	INFO "[INFO] html_strategy is cgi and html_navbar is false. Skipping template generation";
++    	return;
++    }
++
++    my $update_time = Time::HiRes::time;
++    my $lockfile = "$config->{rundir}/munin-html-navbar.lock";
++
++    INFO "[INFO] Starting munin-html-navbar, getting lock $lockfile";
++
++    munin_runlock($lockfile);
++
++
++   # Preparing the group tree...
++
++    if (!defined($groups) or scalar(%{$groups} eq '0')) {
++	LOGCROAK "[FATAL] There is nothing to do here, since there are no nodes with any plugins.  Please refer to http://munin-monitoring.org/wiki/FAQ_no_graphs";
++    };
++
++    if (defined $groups->{"name"} and $groups->{"name"} eq "root") {
++        $groups = $groups->{"groups"};    # root->groups
++    }
++
++    if ($do_dump) {
++	print munin_dumpconfig_as_str($groups);
++        exit 0;
++    }
++
++    emit_navbar($groups,$timestamp,0);
++
++    INFO "[INFO] Releasing lock file $lockfile";
++
++    munin_removelock("$lockfile");
++
++    $update_time = sprintf("%.2f", (Time::HiRes::time - $update_time));
++
++    INFO "[INFO] munin-html-navbar finished ($update_time sec)";
++}
++
+ sub find_complinks{
+     my($type) = @_;
+     
+@@ -756,6 +803,62 @@ sub emit_404_template {
+ 	}
+ }
+ 
++sub emit_navbar {
++    # Draw navbar
++    my ($groups, $t, $emit_to_stdout) = @_;
++
++    my $tmpl = munin_get($config, "navbar_template", "partial/navbar");
++
++    my $template = HTML::Template->new(
++        filename          => "$tmpldir/$tmpl.tmpl",
++        die_on_bad_params => 0,
++        loop_context_vars => 1,
++		global_vars       => 1,
++		filter            => sub {
++		    my $ref = shift;
++	    	$$ref =~ s/URLX/URL0/g;
++		},
++    );
++
++    # FIX: this sometimes bugs:
++
++    # HTML::Template::param() : attempt to set parameter 'groups' with
++    # a scalar - parameter is not a TMPL_VAR! at
++    # /usr/local/share/perl/5.10.0/Munin/Master/HTMLOld.pm line 140
++
++    $template->param(
++                    TAGLINE   => $htmltagline,
++                    GROUPS    => $groups,
++                    CSS_NAME  => get_css_name(),
++		    R_PATH => '',
++		    R_PATH_ABS => '/',
++		    ROOTGROUPS => $htmlconfig->{"groups"},
++		    MUNIN_VERSION => $Munin::Common::Defaults::MUNIN_VERSION,
++		    TIMESTAMP	=> $timestamp,
++		    NGLOBALCATS => $htmlconfig->{"nglobalcats"},
++		    GLOBALCATS => $htmlconfig->{"globalcats"},
++		    NCRITICAL => scalar(@{$htmlconfig->{"problems"}->{"criticals"}}),
++		    NWARNING => scalar(@{$htmlconfig->{"problems"}->{"warnings"}}),
++		    NUNKNOWN => scalar(@{$htmlconfig->{"problems"}->{"unknowns"}}),
++    );
++
++    if($emit_to_stdout){
++      print $template->output;
++    } else {
++      my $filename = munin_get_html_filename($config);
++      # hack for navbar
++      $filename =~ s/index\.html$/navbar.html/;
++      ensure_dir_exists($filename);
++
++      DEBUG "[DEBUG] Creating navbar $filename";
++
++      open(my $FILE, '>', $filename)
++	  or die "Cannot open $filename for writing: $!";
++      print $FILE $template->output;
++      close $FILE;
++    }
++}
++
+ 
+ sub copy_web_resources {
+     my ($staticdir, $htmldir) = @_;
+-- 
+2.11.0
+
