@@ -1,3 +1,12 @@
+munin (2.0.36-1~bpo8+grnet+5) jessie-backports; urgency=medium
+
+  * Add debian/patches
+    * 0013-munin-cgi-graph-only-remove-rendered-graphs-if-QUERY_STRING-present.patch
+    * 0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
+    * 0015-add-munin-html-navbar.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Tue, 29 May 2018 17:22:48 +0300
+
 munin (2.0.36-1~bpo8+grnet+4) jessie-backports; urgency=medium
 
   * Fix debian/patches/0012-More-logging-for-munin-asyncd-aimed-at-fixing-the-1h.patch
