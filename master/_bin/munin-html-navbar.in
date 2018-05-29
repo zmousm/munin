@@ -1,0 +1,15 @@
+#!@@PERL@@
+# -*- cperl -*-
+
+use warnings;
+use strict;
+
+use Munin::Master::HTMLOld;
+
+$|=1;
+
+html_startup(\@ARGV);
+
+html_navbar();
+
+1;

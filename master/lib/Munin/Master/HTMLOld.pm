@@ -65,7 +65,7 @@ use Exporter;
 
 our (@ISA, @EXPORT);
 @ISA    = qw(Exporter);
-@EXPORT = qw(html_startup html_main get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
+@EXPORT = qw(html_startup html_main html_navbar get_config emit_main_index emit_404_template emit_comparison_template emit_group_template emit_graph_template emit_service_template emit_category_template emit_problem_template update_timestamp);
 
 use HTML::Template;
 use POSIX qw(strftime);
@@ -237,6 +237,53 @@ sub html_main {
     $update_time = sprintf("%.2f", (Time::HiRes::time - $update_time));
 
     INFO "[INFO] munin-html finished ($update_time sec)";
+}
+
+sub html_navbar {
+    my $configtime = Time::HiRes::time;
+    get_config(0);
+    my $groups = $htmlconfig;
+    $configtime = sprintf("%.2f", (Time::HiRes::time - $configtime));
+    INFO "[INFO] config generated ($configtime sec)";
+
+    if (munin_get($config,"html_strategy","cron") eq "cgi" &&
+        !munin_get_bool($config,"html_navbar",0)){
+    	INFO "[INFO] html_strategy is cgi and html_navbar is false. Skipping template generation";
+    	return;
+    }
+
+    my $update_time = Time::HiRes::time;
+    my $lockfile = "$config->{rundir}/munin-html-navbar.lock";
+
+    INFO "[INFO] Starting munin-html-navbar, getting lock $lockfile";
+
+    munin_runlock($lockfile);
+
+
+   # Preparing the group tree...
+
+    if (!defined($groups) or scalar(%{$groups} eq '0')) {
+	LOGCROAK "[FATAL] There is nothing to do here, since there are no nodes with any plugins.  Please refer to http://munin-monitoring.org/wiki/FAQ_no_graphs";
+    };
+
+    if (defined $groups->{"name"} and $groups->{"name"} eq "root") {
+        $groups = $groups->{"groups"};    # root->groups
+    }
+
+    if ($do_dump) {
+	print munin_dumpconfig_as_str($groups);
+        exit 0;
+    }
+
+    emit_navbar($groups,$timestamp,0);
+
+    INFO "[INFO] Releasing lock file $lockfile";
+
+    munin_removelock("$lockfile");
+
+    $update_time = sprintf("%.2f", (Time::HiRes::time - $update_time));
+
+    INFO "[INFO] munin-html-navbar finished ($update_time sec)";
 }
 
 sub find_complinks{
@@ -754,6 +801,62 @@ sub emit_404_template {
 	    print $FILE $template->output;
     	close $FILE;
 	}
+}
+
+sub emit_navbar {
+    # Draw navbar
+    my ($groups, $t, $emit_to_stdout) = @_;
+
+    my $tmpl = munin_get($config, "navbar_template", "partial/navbar");
+
+    my $template = HTML::Template->new(
+        filename          => "$tmpldir/$tmpl.tmpl",
+        die_on_bad_params => 0,
+        loop_context_vars => 1,
+		global_vars       => 1,
+		filter            => sub {
+		    my $ref = shift;
+	    	$$ref =~ s/URLX/URL0/g;
+		},
+    );
+
+    # FIX: this sometimes bugs:
+
+    # HTML::Template::param() : attempt to set parameter 'groups' with
+    # a scalar - parameter is not a TMPL_VAR! at
+    # /usr/local/share/perl/5.10.0/Munin/Master/HTMLOld.pm line 140
+
+    $template->param(
+                    TAGLINE   => $htmltagline,
+                    GROUPS    => $groups,
+                    CSS_NAME  => get_css_name(),
+		    R_PATH => '',
+		    R_PATH_ABS => '/',
+		    ROOTGROUPS => $htmlconfig->{"groups"},
+		    MUNIN_VERSION => $Munin::Common::Defaults::MUNIN_VERSION,
+		    TIMESTAMP	=> $timestamp,
+		    NGLOBALCATS => $htmlconfig->{"nglobalcats"},
+		    GLOBALCATS => $htmlconfig->{"globalcats"},
+		    NCRITICAL => scalar(@{$htmlconfig->{"problems"}->{"criticals"}}),
+		    NWARNING => scalar(@{$htmlconfig->{"problems"}->{"warnings"}}),
+		    NUNKNOWN => scalar(@{$htmlconfig->{"problems"}->{"unknowns"}}),
+    );
+
+    if($emit_to_stdout){
+      print $template->output;
+    } else {
+      my $filename = munin_get_html_filename($config);
+      # hack for navbar
+      $filename =~ s/index\.html$/navbar.html/;
+      ensure_dir_exists($filename);
+
+      DEBUG "[DEBUG] Creating navbar $filename";
+
+      open(my $FILE, '>', $filename)
+	  or die "Cannot open $filename for writing: $!";
+      print $FILE $template->output;
+      close $FILE;
+    }
 }
 
 

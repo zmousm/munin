@@ -65,6 +65,8 @@ my %legal = map { $_ => 1 } qw(
 	htmldir
 	html_rename
 	html_strategy
+	html_navbar
+	navbar_template
 	includedir
 	info
 	label

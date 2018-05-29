@@ -116,6 +116,7 @@ install-master-prime: $(INFILES_MASTER) install-pre install-master
 	$(INSTALL) -m 0755 build/master/_bin/munin-check $(BINDIR)/
 	$(INSTALL) -m 0755 build/master/_bin/munin-update $(LIBDIR)/
 	$(INSTALL) -m 0755 build/master/_bin/munin-html $(LIBDIR)/
+	$(INSTALL) -m 0755 build/master/_bin/munin-html-navbar $(LIBDIR)/
 	$(INSTALL) -m 0755 build/master/_bin/munin-graph $(LIBDIR)/
 	$(INSTALL) -m 0755 build/master/_bin/munin-limits $(LIBDIR)/
 	$(INSTALL) -m 0755 build/master/_bin/munin-datafile2storable $(LIBDIR)/
