@@ -1,3 +1,9 @@
+munin (2.0.36-1~bpo9+grnet+6) stretch-backports; urgency=medium
+
+  * Fix debian/patches/0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Wed, 30 May 2018 15:08:13 +0300
+
 munin (2.0.36-1~bpo9+grnet+5) stretch-backports; urgency=medium
 
   * Add debian/patches
