@@ -95,7 +95,7 @@ index bbc9d066..17e5084d 100755
  		emit_comparison_template($group, $cmp_time, 1);
  	} else { #group page
 +	  my $part = get_next_part($path);
-+	  if (defined $part && $part =~ $re_part_other) {
++	  if (!defined $part || $part =~ $re_part_other) {
 +		emit_header();
  		emit_group_template($group, 1);
 +	  } else {
