@@ -1,3 +1,24 @@
+munin (2.0.37-1~grnet+1) unstable; urgency=medium
+
+  * Sync with Debian
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 12:41:39 +0300
+
+munin (2.0.37-2) unstable; urgency=medium
+
+  * d/control:
+    - switch packaging to salsa.debian.org. Thanks to the alioth admins for
+      providing such a nice service so long!
+    - bump Standards-Version to 4.1.4, no changes needed.
+
+ -- Holger Levsen <holger@debian.org>  Wed, 30 May 2018 23:41:48 +0000
+
+munin (2.0.37-1) unstable; urgency=medium
+
+  * New upstream version 2.0.37.
+
+ -- Holger Levsen <holger@debian.org>  Thu, 29 Mar 2018 15:26:26 +0000
+
 munin (2.0.36-1~bpo9+grnet+7) stretch-backports; urgency=medium
 
   * Add debian/patches
@@ -61,8 +82,12 @@ munin (2.0.36-1) UNRELEASED; urgency=medium
     - plugin nfsd4: Closes: #833740
     - plugin psu_: Closes: #860487
   * Build-Depends-Indep: switch from default-jdk to openjdk-8-jdk as munin
-    fails to build with java 9.
+    fails to build with java 9. Closes: #873993
   * debian/Makefile.config: define JC without path containing default-java.
+  * munin-plugis-core:
+    - add suggests to time. Closes: #862794
+    - add suggests to bc. Closes: #886516
+  * Switch maintainer address to team+munin@tracker.debian.org.
   * debian/changelog: drop trailing whitespaces, thanks lintian.
 
  -- Holger Levsen <holger@debian.org>  Sat, 24 Mar 2018 14:10:52 +0000
