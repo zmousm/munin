@@ -1,3 +1,9 @@
+munin (2.0.37-1~bpo7+grnet+1) wheezy-backports; urgency=medium
+
+  * Rebuild for wheezy-backports.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 15:36:05 +0300
+
 munin (2.0.37-1~grnet+1) unstable; urgency=medium
 
   * Sync with Debian
