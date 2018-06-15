@@ -50,9 +50,9 @@ index 6ec3c03b..589e08aa 100644
  my @plugins;
  {
  	print STDERR "[$$][$process_name] Reading config from $host\n" if $verbose;
-@@ -157,7 +163,8 @@ MAIN: while($keepgoing) {
- 		$last_updated{$plugin} = $when;
- 		$when_next = min($when_next, $when + max($plugin_rate, $minrate));
+@@ -175,7 +181,8 @@ MAIN: while($keepgoing) {
+ 			"), when_next: $when_next (" .
+ 			localtime($when_next) . ")\n" if $debug;
  
 -		if ($do_fork && fork()) {
 +		if ($do_fork && open my $cfh, '-|') {
@@ -60,7 +60,7 @@ index 6ec3c03b..589e08aa 100644
  			# parent, return directly
  			next PLUGIN;
  		}
-@@ -193,6 +200,24 @@ MAIN: while($keepgoing) {
+@@ -211,6 +218,24 @@ MAIN: while($keepgoing) {
  	print STDERR "[$$][$process_name] closing sock\n" if $verbose;
  	$sock = undef;
  

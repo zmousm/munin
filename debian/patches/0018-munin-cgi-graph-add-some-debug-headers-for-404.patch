@@ -41,7 +41,7 @@ index d9dc461f..302cbb9d 100755
  	  "\r\n";
  	next;
      }
-@@ -222,10 +229,12 @@ while (new CGI::Fast) {
+@@ -224,10 +231,12 @@ while (new CGI::Fast) {
  	if ($@) {
  		if ($@ =~ m/^Could not find FQN/) {
  			# Unknown graph asked
