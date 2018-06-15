@@ -1,3 +1,9 @@
+munin (2.0.37-1~bpo9+grnet+1) stretch-backports; urgency=medium
+
+  * Rebuild for stretch-backports.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 13:14:22 +0300
+
 munin (2.0.37-1~grnet+1) unstable; urgency=medium
 
   * Sync with Debian
