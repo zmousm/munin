@@ -1,3 +1,9 @@
+munin (2.0.37-1~bpo8+grnet+2) jessie-backports; urgency=medium
+
+  * Refresh patches
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 15:27:54 +0300
+
 munin (2.0.37-1~bpo8+grnet+1) jessie-backports; urgency=medium
 
   * Rebuild for jessie-backports.
