@@ -1,3 +1,9 @@
+munin (2.0.37-2~bpo8+grnet+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 17:45:28 +0300
+
 munin (2.0.37-2~grnet+1) unstable; urgency=medium
 
   * Sync with Debian
