@@ -1,3 +1,9 @@
+munin (2.0.37-1~bpo9+grnet+2) stretch-backports; urgency=medium
+
+  * Refresh patches
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 14:57:33 +0300
+
 munin (2.0.37-1~bpo9+grnet+1) stretch-backports; urgency=medium
 
   * Rebuild for stretch-backports.
