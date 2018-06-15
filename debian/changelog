@@ -1,3 +1,9 @@
+munin (2.0.37-2~grnet+1) unstable; urgency=medium
+
+  * Sync with Debian
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 12:41:39 +0300
+
 munin (2.0.37-2) unstable; urgency=medium
 
   * d/control:
