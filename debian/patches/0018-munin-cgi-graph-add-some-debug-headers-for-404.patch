@@ -1,0 +1,59 @@
+From 217940a4e372e87392a42bc3c7509e8c7a1b1d58 Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Fri, 15 Jun 2018 08:43:48 +0300
+Subject: [PATCH 3/3] munin-cgi-graph: add some debug/headers for 404
+
+Experience has proved this is quite useful
+---
+ master/_bin/munin-cgi-graph.in | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/master/_bin/munin-cgi-graph.in b/master/_bin/munin-cgi-graph.in
+index d9dc461f..302cbb9d 100755
+--- a/master/_bin/munin-cgi-graph.in
++++ b/master/_bin/munin-cgi-graph.in
+@@ -80,10 +80,15 @@ while (new CGI::Fast) {
+     # This fixes http://bugs.debian.org/668666 and closes a lots of other potential bugs.
+     if ( has_offending_chars($ENV{PATH_INFO}) || has_offending_chars($ENV{QUERY_STRING}) ) {
+         # If parameters are not valid, just pretend we didn't find anything.
++	DEBUG sprintf("[404] has_offending_chars PATH_INFO %s QUERY_STRING %s",
++		      has_offending_chars($ENV{PATH_INFO}),
++		      has_offending_chars($ENV{QUERY_STRING})
++		     );
+         print "Status: 404 Not Found\r\n",
+           "Content-Type: image/png\r\n",
+           "X-Munin-Pid: $$\r\n",
+           "X-Munin-Request: $nb_request/$nb_request_max\r\n",
++          "X-Munin-404: has_offending_chars\r\n",
+           "\r\n";
+         next;
+     }
+@@ -142,10 +147,12 @@ while (new CGI::Fast) {
+ 
+     if (! &verify_parameters ($dom, $host, $serv, $scale)) {
+ 	# If parameters are not valid, just say we didn't find anything.
++	DEBUG "[404] verify_parameters";
+ 	print "Status: 404 Not Found\r\n",
+ 	  "Content-Type: image/png\r\n",
+ 	  "X-Munin-Pid: $$\r\n",
+ 	  "X-Munin-Request: $nb_request/$nb_request_max\r\n",
++	  "X-Munin-404: verify_parameters\r\n",
+ 	  "\r\n";
+ 	next;
+     }
+@@ -222,10 +229,12 @@ while (new CGI::Fast) {
+ 	if ($@) {
+ 		if ($@ =~ m/^Could not find FQN/) {
+ 			# Unknown graph asked
++			DEBUG "[404] $@";
+ 			print "Status: 404 Not Found\r\n",
+ 			      "Content-Type: image/png\r\n",
+ 			      "X-Munin-Pid: $$\r\n",
+ 			      "X-Munin-Request: $nb_request/$nb_request_max\r\n",
++			      "X-Munin-404: could_not_find_fqn\r\n",
+ 			    "\r\n";
+ 			# Next item
+ 			next;
+-- 
+2.11.0
+

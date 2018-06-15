@@ -1,0 +1,65 @@
+From a38cb1b5f2355b66fadc4aea0445beedbc45abe7 Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Thu, 14 Jun 2018 17:30:37 +0300
+Subject: [PATCH 1/3] SpoolReader: Rewind to last timestamp and return config
+ (only) if "epoch not found in spool file"
+
+Returning only config (thus no timestamped values) for a service
+mainly serves as a measure of protection against
+SpoolWriter/SpoolReader race conditions, ensuring it will not
+disappear from the datafile.
+---
+ node/lib/Munin/Node/SpoolReader.pm | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/node/lib/Munin/Node/SpoolReader.pm b/node/lib/Munin/Node/SpoolReader.pm
+index e3de5f73..66a8c27c 100644
+--- a/node/lib/Munin/Node/SpoolReader.pm
++++ b/node/lib/Munin/Node/SpoolReader.pm
+@@ -117,6 +117,7 @@ sub _cat_multigraph_file
+     foreach my $file (readdir $self->{spooldirhandle}) {
+         next unless $file =~ m/^munin-daemon\.$service\.(\d+)\.(\d+)$/;
+         next unless $1+$2 >= $timestamp;
++        my $position = 0;
+ 
+         open my $fh, '<', "$self->{spooldir}/$file"
+             or die "Unable to open spool file: $!";
+@@ -127,6 +128,7 @@ sub _cat_multigraph_file
+         # wind through to the start of the first results after $timestamp
+         while (<$fh>) {
+             ($epoch) = m/^timestamp (\d+)/ or next;
++            $position = tell $fh;
+             logger("Timestamp: $epoch") if $config->{DEBUG};
+             last if ($epoch > $timestamp);
+         }
+@@ -134,7 +136,18 @@ sub _cat_multigraph_file
+         if (eof $fh) {
+             logger("Epoch $timestamp not found in spool file for '$service'")
+                 if $config->{DEBUG};
+-            next;
++            if ($position) {
++                logger("Rewinding to last timestamp")
++                  if $config->{DEBUG};
++                seek($fh, $position, SEEK_SET)
++                  or die "Unable to seek file: $!";
++                # reset $position so as to skip printing values
++                $position = -1;
++            } else {
++                logger("No timestamp, giving up")
++                  if $config->{DEBUG};
++                next;
++            }
+         }
+ 
+         # The timestamp isn't part of the multigraph protocol,
+@@ -149,6 +162,7 @@ sub _cat_multigraph_file
+             }
+ 
+             if (m/^(\w+)\.value\s+(?:N:)?(.+)$/) {
++                next if ($position == -1);
+                 $_ = "$1.value $epoch:$2";
+             }
+ 
+-- 
+2.11.0
+
