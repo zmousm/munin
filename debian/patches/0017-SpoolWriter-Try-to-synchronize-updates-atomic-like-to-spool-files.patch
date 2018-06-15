@@ -1,0 +1,191 @@
+From 798c8a6863a3a09a349b8fefabfa196b098cdecf Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Thu, 14 Jun 2018 17:49:34 +0300
+Subject: [PATCH 2/3] SpoolWriter: Try to synchronize updates (atomic-like) to
+ spool files
+
+This mainly serves to protect against SpoolWriter/SpoolReader race
+conditions: Copy spool files, update them and move (rename) them over
+in one go at the end. In fork mode, this involves pipe IPC.
+---
+ node/_bin/munin-asyncd.in          | 29 +++++++++++++++++--
+ node/lib/Munin/Node/SpoolWriter.pm | 58 +++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 84 insertions(+), 3 deletions(-)
+
+diff --git a/node/_bin/munin-asyncd.in b/node/_bin/munin-asyncd.in
+index 6ec3c03b..589e08aa 100644
+--- a/node/_bin/munin-asyncd.in
++++ b/node/_bin/munin-asyncd.in
+@@ -24,6 +24,7 @@ use warnings;
+ 
+ use IO::Socket;
+ use IO::File;
++use IO::Select;
+ use File::Path qw(mkpath);
+ use Getopt::Long;
+ use Pod::Usage;
+@@ -40,7 +41,8 @@ my $timeout = 3600;
+ my $minrate = 300;
+ my $retaincount = 7;
+ my $nocleanup;
+-my $do_fork;
++my $do_fork = 0;
++my $subproc_read_timeout = 60;
+ my $verbose;
+ my $debug;
+ my $help;
+@@ -88,11 +90,15 @@ my $spoolwriter = Munin::Node::SpoolWriter->new(
+ 	interval_size => $intervalsize,
+ 	interval_keep => $retaincount,
+ 	hostname  => $metahostname,
++	commit_mode => 1 + $do_fork, # 1=do commit, 2=fork commit
++	commit_suffix => $$, # use our pid as suffix for tmp files
+ );
+ $0 = "munin-asyncd [$metahostname] [idle]";
+ 
+ my $process_name = "main";
+ 
++my $select = IO::Select->new if ($do_fork);
++
+ my @plugins;
+ {
+ 	print STDERR "[$$][$process_name] Reading config from $host\n" if $verbose;
+@@ -157,7 +163,8 @@ MAIN: while($keepgoing) {
+ 		$last_updated{$plugin} = $when;
+ 		$when_next = min($when_next, $when + max($plugin_rate, $minrate));
+ 
+-		if ($do_fork && fork()) {
++		if ($do_fork && open my $cfh, '-|') {
++			$select->add($cfh);
+ 			# parent, return directly
+ 			next PLUGIN;
+ 		}
+@@ -193,6 +200,24 @@ MAIN: while($keepgoing) {
+ 	print STDERR "[$$][$process_name] closing sock\n" if $verbose;
+ 	$sock = undef;
+ 
++	if ($do_fork) {
++	    my $bufs;
++	    while ($select->count) {
++		foreach my $cfh ($select->can_read($subproc_read_timeout)) {
++		    our $buf; local *buf = \$bufs->{fileno($cfh)}; $buf ||= '';
++		    unless (sysread $cfh, $buf, 4096, length($buf)) {
++			while ($buf =~ s/\G(\w+)\s+(.+)\n//) {
++			    if ($1 eq 'commit') {
++				$spoolwriter->add_file_to_commit($2);
++			    }
++			}
++			$select->remove($cfh);
++		    }
++		}
++	    }
++	}
++	$spoolwriter->do_commit();
++
+ 	$spoolwriter->set_metadata("lastruntime", $when);
+ 
+ 	# Clean spool dir
+diff --git a/node/lib/Munin/Node/SpoolWriter.pm b/node/lib/Munin/Node/SpoolWriter.pm
+index a2418cbf..57e61492 100644
+--- a/node/lib/Munin/Node/SpoolWriter.pm
++++ b/node/lib/Munin/Node/SpoolWriter.pm
+@@ -14,6 +14,8 @@ use Munin::Common::Defaults;
+ use Munin::Common::SyncDictFile;
+ use Munin::Node::Logger;
+ 
++use File::Copy;
++
+ 
+ use constant DEFAULT_TIME => 86_400;      # put 1 day of results into a spool file
+ use constant MAXIMUM_AGE  => 7;           # remove spool files more than a week old
+@@ -47,6 +49,8 @@ sub new
+     $args{interval_size} = DEFAULT_TIME unless ($args{interval_size});
+     $args{interval_keep} = MAXIMUM_AGE unless ($args{interval_keep});
+     $args{hostname} = "unknown" unless ($args{hostname});
++    $args{commit_suffix} = $$ unless ($args{commit_suffix});
++    $args{commit_mode} = 0 unless ($args{commit_mode});
+ 
+     set_metadata(\%args, "interval_size", $args{interval_size}) if $args{interval_size} != get_metadata(\%args, "interval_size");
+     set_metadata(\%args, "interval_keep", $args{interval_keep}) if $args{interval_keep} != get_metadata(\%args, "interval_keep");
+@@ -61,6 +65,28 @@ sub new
+ }
+ 
+ 
++sub suffix_filename
++{
++	my ($self, $filename) = @_;
++
++	return ($filename, $filename .".". $self->{commit_suffix});
++}
++
++
++sub add_file_to_commit
++{
++	my ($self, $fn) = @_;
++
++	my ($src, $dst) = $self->suffix_filename($fn);
++
++	$self->{files_to_commit} ||= {};
++
++	$self->{files_to_commit}->{$src} = $dst;
++
++	return ($src, $dst);
++}
++
++
+ #prepare tied hash for metadata persisted to $spooldir/SPOOL-META
+ #should we pull these methods into a base class or create a spool manager class?
+ sub _init_metadata
+@@ -104,7 +130,24 @@ sub write
+ 
+     my $fmtTimestamp = $self->_snap_to_epoch_boundary($timestamp);
+ 
+-    open my $fh , '>>', "$self->{spooldir}/munin-daemon.$service.$fmtTimestamp." . $self->{interval_size}
++    my $filename = "$self->{spooldir}/munin-daemon.$service.$fmtTimestamp." . $self->{interval_size};
++
++    if ($self->{commit_mode}) {
++	(my $filename_src, $filename) = do {
++	    if ($self->{commit_mode} > 1) {
++		print "commit $filename\n";
++		$self->suffix_filename($filename);
++	    } else {
++		$self->add_file_to_commit($filename);
++	    }
++	};
++	if (-f $filename_src) {
++	    copy($filename_src, $filename)
++	      or die "File copy failed: $!";
++	}
++    }
++
++    open my $fh , '>>', $filename
+         or die "Unable to open spool file: $!";
+     flock($fh, LOCK_EX);
+ 
+@@ -122,10 +165,23 @@ sub write
+         print {$fh} $line, "\n" or logger("Error writing results: $!");
+     }
+ 
++    close $fh or die "Unable to close spool file: $!";
++
+     return;
+ }
+ 
+ 
++sub do_commit
++{
++    my ($self) = @_;
++
++    while (my ($plain, $suffixed) = each %{$self->{files_to_commit}}) {
++	move($suffixed, $plain)
++	  or die "File commit failed: $!";
++    }
++}
++
++
+ # removes files from the spooldir older than MAXIMUM_AGE
+ sub cleanup
+ {
+-- 
+2.11.0
+
