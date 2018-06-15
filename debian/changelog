@@ -1,3 +1,12 @@
+munin (2.0.36-1~bpo8+grnet+7) jessie-backports; urgency=medium
+
+  * Add debian/patches
+    * 0016-SpoolReader-Rewind-to-last-timestamp-and-return-config-only-if-epoch-not-found.patch
+    * 0017-SpoolWriter-Try-to-synchronize-updates-atomic-like-to-spool-files.patch
+    * 0018-munin-cgi-graph-add-some-debug-headers-for-404.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Fri, 15 Jun 2018 10:08:49 +0300
+
 munin (2.0.36-1~bpo8+grnet+6) jessie-backports; urgency=medium
 
   * Fix debian/patches/0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
