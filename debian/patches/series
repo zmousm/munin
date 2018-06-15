@@ -13,3 +13,6 @@
 0013-munin-cgi-graph-only-remove-rendered-graphs-if-QUERY_STRING-present.patch
 0014-munin-cgi-html-emit-404-where-a-URL-part-does-not-match-known-values.patch
 0015-add-munin-html-navbar.patch
+0016-SpoolReader-Rewind-to-last-timestamp-and-return-config-only-if-epoch-not-found.patch
+0017-SpoolWriter-Try-to-synchronize-updates-atomic-like-to-spool-files.patch
+0018-munin-cgi-graph-add-some-debug-headers-for-404.patch
