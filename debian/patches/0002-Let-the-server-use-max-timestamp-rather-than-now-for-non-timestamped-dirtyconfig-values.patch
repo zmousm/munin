@@ -1,12 +1,13 @@
-From bd8b7cc10fabb0d073ab074a14e1edf4b5b87313 Mon Sep 17 00:00:00 2001
+From 0c2b702efea5006d68a22a48d28da9587da3f7da Mon Sep 17 00:00:00 2001
 From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
-Date: Wed, 21 Mar 2018 13:37:42 +0200
+Date: Wed Jul 4 08:50:49 2018 +0300
 Subject: [PATCH] Let the server use max timestamp rather than now for
  non-timestamped dirtyconfig values
 
 * Use special value -1 rather than $now for when field for dirtyconfig output
 * Pre-compute $last_timestamp, in a separate iteration
   * Fall back to current timestamp
+  * But not for spoolfetch timestamp
 * If special value found in when field, use $last_timestamp instead
 * Munin::Master::UpdateWorker::_update_rrd_file now returns number of
   RRD updates and $last_timestamp is an argument
@@ -39,10 +40,21 @@ index fcacff7f..c00a3564 100644
  	    $ds_name = $self->_sanitise_fieldname($ds_name);
  	    if ($value =~ /^(\d+):(.+)$/) {
 diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
-index 645deeb0..7560949f 100644
+index 645deeb0..4d911ed0 100644
 --- a/master/lib/Munin/Master/UpdateWorker.pm
 +++ b/master/lib/Munin/Master/UpdateWorker.pm
-@@ -574,7 +574,19 @@ sub _update_rrd_files {
+@@ -224,7 +224,9 @@ sub do_work {
+ 		    %{$service_config{global}});
+ 
+ 		my $last_updated_timestamp = $self->_update_rrd_files(\%service_config, \%service_data);
+-          	$self->set_spoolfetch_timestamp($last_updated_timestamp);
++		if ($last_updated_timestamp) {
++		    $self->set_spoolfetch_timestamp($last_updated_timestamp);
++		}
+ 	    } # for @plugins
+ 
+ 	    # Send "quit" to node
+@@ -574,7 +576,17 @@ sub _update_rrd_files {
      my $nodedesignation = $self->{host}{host_name}."/".
  	$self->{host}{address}.":".$self->{host}{port};
  
@@ -57,9 +69,7 @@ index 645deeb0..7560949f 100644
 +    		} keys %{$nested_service_config->{data_source}{$svc}};
 +    	    } keys %{$nested_service_config->{data_source}}
 +    	);
-+    if (not $last_timestamp > 0) {
-+    	$last_timestamp = time;
-+    }
++    my $last_timestamp_or_now = ($last_timestamp > 0) ? $last_timestamp : time;
  
      for my $service (keys %{$nested_service_config->{data_source}}) {
  
@@ -68,7 +78,7 @@ index 645deeb0..7560949f 100644
  
  	    if (defined($service_data) and defined($service_data->{$ds_name})) {
 -		$last_timestamp = max($last_timestamp, $self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}));
-+		$self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}, $last_timestamp);
++		$self->_update_rrd_file($rrd_file, $ds_name, $service_data->{$ds_name}, $last_timestamp_or_now);
  	    }
  	    else {
  		WARN "[WARNING] Service $service on $nodedesignation returned no data for label $ds_name";
@@ -77,7 +87,7 @@ index 645deeb0..7560949f 100644
  
  sub _update_rrd_file {
 -    my ($self, $rrd_file, $ds_name, $ds_values) = @_;
-+    my ($self, $rrd_file, $ds_name, $ds_values, $last_timestamp) = @_;
++    my ($self, $rrd_file, $ds_name, $ds_values, $max_timestamp) = @_;
  
      my $values = $ds_values->{value};
  
@@ -86,7 +96,7 @@ index 645deeb0..7560949f 100644
          my $when = $ds_values->{when}[$i];
  
 +	if ($when == -1) {
-+	    $when = $last_timestamp;
++	    $when = $max_timestamp;
 +	}
 +
  	# Ignore values that is not in monotonic increasing timestamp for the RRD.

@@ -12,7 +12,7 @@ diff --git a/lib/Munin/Master/UpdateWorker.pm b/lib/Munin/Master/UpdateWorker.pm
 index b70ac380..2f7413a4 100644
 --- a/master/lib/Munin/Master/UpdateWorker.pm
 +++ b/master/lib/Munin/Master/UpdateWorker.pm
-@@ -635,6 +635,8 @@ sub _update_carbon_server {
+@@ -637,6 +637,8 @@ sub _update_carbon_server {
  
  					$self->{carbon_socket}->print("${metric_path}.$service.$ds_name $value $when");
  

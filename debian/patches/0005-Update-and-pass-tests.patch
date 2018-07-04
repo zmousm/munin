@@ -21,7 +21,7 @@ index 2f7413a4..1edbea4a 100644
  		DEBUG "[DEBUG] Connecting to Carbon Server $config->{carbon_server}:$config->{carbon_port}...";
  		$self->{carbon_socket} = IO::Socket::INET->new (
  				PeerAddr => $config->{carbon_server},
-@@ -601,9 +601,9 @@ sub _update_carbon_server {
+@@ -603,9 +603,9 @@ sub _update_carbon_server {
  
  	for my $service (keys %{$nested_service_config->{data_source}}) {
  		my $service_config = $nested_service_config->{data_source}{$service};
@@ -33,7 +33,7 @@ index 2f7413a4..1edbea4a 100644
  			my $ds_config = $service_config->{$ds_name};
  
  			unless (defined($ds_config->{label})) {
-@@ -617,7 +617,7 @@ sub _update_carbon_server {
+@@ -619,7 +619,7 @@ sub _update_carbon_server {
  				next unless defined ($values);
  				for (my $i = 0; $i < scalar @$values; $i++) {
  					my $value = $values->[$i];

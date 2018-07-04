@@ -16,3 +16,4 @@
 0016-SpoolReader-Rewind-to-last-timestamp-and-return-config-only-if-epoch-not-found.patch
 0017-SpoolWriter-Try-to-synchronize-updates-atomic-like-to-spool-files.patch
 0018-munin-cgi-graph-add-some-debug-headers-for-404.patch
+0019-Fix-munin-asyncd-fork-bomb.patch

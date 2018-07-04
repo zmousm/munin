@@ -21,7 +21,7 @@ index 1edbea4a..10eadec0 100644
  		$self->{carbon_socket} = IO::Socket::INET->new (
  				PeerAddr => $config->{carbon_server},
  				PeerPort => $config->{carbon_port},
-@@ -597,7 +597,7 @@ sub _update_carbon_server {
+@@ -599,7 +599,7 @@ sub _update_carbon_server {
  		}
  	}
  
@@ -30,7 +30,7 @@ index 1edbea4a..10eadec0 100644
  
  	for my $service (keys %{$nested_service_config->{data_source}}) {
  		my $service_config = $nested_service_config->{data_source}{$service};
-@@ -610,9 +610,8 @@ sub _update_carbon_server {
+@@ -612,9 +612,8 @@ sub _update_carbon_server {
  				# _update_rrd_files will already have warned about this so silently move on
  				next;
  			}
@@ -42,7 +42,7 @@ index 1edbea4a..10eadec0 100644
  				my $values = $service_data->{$ds_name}{value};
  				next unless defined ($values);
  				for (my $i = 0; $i < scalar @$values; $i++) {
-@@ -633,7 +632,8 @@ sub _update_carbon_server {
+@@ -635,7 +634,8 @@ sub _update_carbon_server {
  						}
  					}
  
