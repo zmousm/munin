@@ -1,3 +1,11 @@
+munin (2.0.37-2~bpo8+grnet+3) jessie-backports; urgency=medium
+
+  * Update debian/patches/0002-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
+  * Refresh patches
+  * Add debian/patches/0019-Fix-munin-asyncd-fork-bomb.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Wed, 04 Jul 2018 16:03:11 +0300
+
 munin (2.0.37-2~bpo8+grnet+2) jessie-backports; urgency=medium
 
   * Refresh patches
