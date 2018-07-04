@@ -1,10 +1,11 @@
-From 0c2b702efea5006d68a22a48d28da9587da3f7da Mon Sep 17 00:00:00 2001
+From 3a8ea209c12530cc95f01f10b56f1f488f518a2d Mon Sep 17 00:00:00 2001
 From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
-Date: Wed Jul 4 08:50:49 2018 +0300
+Date: Thu Jul 5 10:22:47 2018 +0300
 Subject: [PATCH] Let the server use max timestamp rather than now for
  non-timestamped dirtyconfig values
 
 * Use special value -1 rather than $now for when field for dirtyconfig output
+  * Declare as a named constant
 * Pre-compute $last_timestamp, in a separate iteration
   * Fall back to current timestamp
   * But not for spoolfetch timestamp
@@ -17,10 +18,20 @@ Subject: [PATCH] Let the server use max timestamp rather than now for
  2 files changed, 21 insertions(+), 8 deletions(-)
 
 diff --git a/master/lib/Munin/Master/Node.pm b/master/lib/Munin/Master/Node.pm
-index fcacff7f..c00a3564 100644
+index fcacff7f..37ad0369 100644
 --- a/master/lib/Munin/Master/Node.pm
 +++ b/master/lib/Munin/Master/Node.pm
-@@ -312,9 +312,6 @@ sub parse_service_config {
+@@ -17,6 +17,9 @@ use Log::Log4perl qw( :easy );
+ use Time::HiRes qw( gettimeofday tv_interval );
+ use IO::Socket::INET6;
+ 
++# Used as a timestamp value, this declares none was found
++use constant NO_TIMESTAMP => -1;
++
+ my $config = Munin::Master::Config->instance()->{config};
+ 
+ # Quick version, to enable "DEBUG ... if $debug" constructs
+@@ -312,9 +315,6 @@ sub parse_service_config {
  
      new_service($service);
  
@@ -30,17 +41,17 @@ index fcacff7f..c00a3564 100644
      for my $line (@$lines) {
  
  	DEBUG "[CONFIG from $plugin] $line" if $debug;
-@@ -362,7 +359,7 @@ sub parse_service_config {
+@@ -362,7 +362,7 @@ sub parse_service_config {
          } elsif ($line =~ m{\A ([^\.]+)\.value \s+ (.+?) \s* $}xms) {
  	    $correct++;
  	    # Special case for dirtyconfig
 -            my ($ds_name, $value, $when) = ($1, $2, $now);
-+            my ($ds_name, $value, $when) = ($1, $2, -1);
++            my ($ds_name, $value, $when) = ($1, $2, NO_TIMESTAMP);
              
  	    $ds_name = $self->_sanitise_fieldname($ds_name);
  	    if ($value =~ /^(\d+):(.+)$/) {
 diff --git a/master/lib/Munin/Master/UpdateWorker.pm b/master/lib/Munin/Master/UpdateWorker.pm
-index 645deeb0..4d911ed0 100644
+index 645deeb0..917eafe0 100644
 --- a/master/lib/Munin/Master/UpdateWorker.pm
 +++ b/master/lib/Munin/Master/UpdateWorker.pm
 @@ -224,7 +224,9 @@ sub do_work {
@@ -95,7 +106,7 @@ index 645deeb0..4d911ed0 100644
          my $value = $values->[$i];
          my $when = $ds_values->{when}[$i];
  
-+	if ($when == -1) {
++	if ($when == $self->{node}->NO_TIMESTAMP) {
 +	    $when = $max_timestamp;
 +	}
 +
