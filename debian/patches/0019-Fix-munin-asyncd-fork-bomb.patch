@@ -1,0 +1,35 @@
+From e6c472b46966fb6848ee38f6c052109d999edb64 Mon Sep 17 00:00:00 2001
+From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
+Date: Wed, 4 Jul 2018 00:51:08 +0300
+Subject: [PATCH] Fix munin-asyncd fork bomb
+
+If a forked child can't connect to munin-node, it should die rather than
+moving to the next plugin. The latter leads to the child also forking
+itself, recursively spawning an uncontrolled number of processes, which
+quickly exhausts system resources.
+---
+ node/_bin/munin-asyncd.in | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/node/_bin/munin-asyncd.in b/node/_bin/munin-asyncd.in
+index 6ec3c03b..567c4426 100644
+--- a/node/_bin/munin-asyncd.in
++++ b/node/_bin/munin-asyncd.in
+@@ -194,8 +194,12 @@ MAIN: while($keepgoing) {
+ 			);
+ 
+ 			unless ($sock) {
+-				warn "Error creating socket: $!, moving to next plugin to try again";
+-				next;
++				if ($do_fork) {
++					die "Error creating socket: $!";
++				} else {
++					warn "Error creating socket: $!, moving to next plugin to try again";
++					next;
++				}
+ 			}
+ 
+ 			<$sock>; # skip header
+-- 
+2.11.0
+
