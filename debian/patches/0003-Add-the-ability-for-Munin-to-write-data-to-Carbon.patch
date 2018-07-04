@@ -77,17 +77,15 @@ index 40922d80..b70ac380 100644
      INFO "[INFO] starting work in $$ for $nodedesignation.\n";
      my $done = $self->{node}->do_in_session(sub {
  
-@@ -224,7 +236,8 @@ sub do_work {
- 		    %{$service_config{global}});
- 
- 		my $last_updated_timestamp = $self->_update_rrd_files(\%service_config, \%service_data);
--          	$self->set_spoolfetch_timestamp($last_updated_timestamp);
+@@ -227,6 +239,7 @@ sub do_work {
+ 		if ($last_updated_timestamp) {
+ 		    $self->set_spoolfetch_timestamp($last_updated_timestamp);
+ 		}
 +		$self->_update_carbon_server(\%service_config, \%service_data);
-+		$self->set_spoolfetch_timestamp($last_updated_timestamp);
  	    } # for @plugins
  
  	    # Send "quit" to node
-@@ -247,6 +260,9 @@ sub do_work {
+@@ -249,6 +262,9 @@ sub do_work {
  	    return;
  	}
  
@@ -97,7 +95,7 @@ index 40922d80..b70ac380 100644
  	# Everything went smoothly.
  	DEBUG "[DEBUG] Everything went smoothly.";
  	return 1;
-@@ -567,6 +583,66 @@ sub _ensure_tuning {
+@@ -569,6 +585,66 @@ sub _ensure_tuning {
      return $success;
  }
  
