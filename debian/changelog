@@ -1,4 +1,12 @@
-munin (2.0.37-2~grnet+2) UNRELEASED; urgency=medium
+munin (2.0.37-2~grnet+3) unstable; urgency=medium
+
+  * Update debian/patches/0002-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
+  * Refresh patches
+  * Add debian/patches/0019-Fix-munin-asyncd-fork-bomb.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Wed, 04 Jul 2018 15:18:54 +0300
+
+munin (2.0.37-2~grnet+2) unstable; urgency=medium
 
   * Refresh patches
 
