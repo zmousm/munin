@@ -1,3 +1,10 @@
+munin (2.0.37-2~bpo8+grnet+4) jessie-backports; urgency=medium
+
+  * Update debian/patches/0002-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
+  * Update debian/patches/0017-SpoolWriter-Try-to-synchronize-updates-atomic-like-to-spool-files.patch
+
+ -- Zenon Mousmoulas <zmousm@noc.grnet.gr>  Sat, 07 Jul 2018 01:01:14 +0300
+
 munin (2.0.37-2~bpo8+grnet+3) jessie-backports; urgency=medium
 
   * Update debian/patches/0002-Let-the-server-use-max-timestamp-rather-than-now-for-non-timestamped-dirtyconfig-values.patch
