@@ -1,6 +1,6 @@
-From 798c8a6863a3a09a349b8fefabfa196b098cdecf Mon Sep 17 00:00:00 2001
+From 4d62de939fb7ceb7b457637d08cda199baec52d3 Mon Sep 17 00:00:00 2001
 From: Zenon Mousmoulas <zmousm@noc.grnet.gr>
-Date: Thu, 14 Jun 2018 17:49:34 +0300
+Date: Fri Jul 6 22:54:30 2018 +0300
 Subject: [PATCH 2/3] SpoolWriter: Try to synchronize updates (atomic-like) to
  spool files
 
@@ -13,7 +13,7 @@ in one go at the end. In fork mode, this involves pipe IPC.
  2 files changed, 84 insertions(+), 3 deletions(-)
 
 diff --git a/node/_bin/munin-asyncd.in b/node/_bin/munin-asyncd.in
-index 6ec3c03b..589e08aa 100644
+index 262c1081..ddb75bfc 100644
 --- a/node/_bin/munin-asyncd.in
 +++ b/node/_bin/munin-asyncd.in
 @@ -24,6 +24,7 @@ use warnings;
@@ -86,7 +86,7 @@ index 6ec3c03b..589e08aa 100644
  
  	# Clean spool dir
 diff --git a/node/lib/Munin/Node/SpoolWriter.pm b/node/lib/Munin/Node/SpoolWriter.pm
-index a2418cbf..57e61492 100644
+index a2418cbf..decc92a3 100644
 --- a/node/lib/Munin/Node/SpoolWriter.pm
 +++ b/node/lib/Munin/Node/SpoolWriter.pm
 @@ -14,6 +14,8 @@ use Munin::Common::Defaults;
@@ -154,7 +154,7 @@ index a2418cbf..57e61492 100644
 +	};
 +	if (-f $filename_src) {
 +	    copy($filename_src, $filename)
-+	      or die "File copy failed: $!";
++	      or die "File copy ($filename_src -> $filename) failed: $!";
 +	}
 +    }
 +
@@ -162,7 +162,7 @@ index a2418cbf..57e61492 100644
          or die "Unable to open spool file: $!";
      flock($fh, LOCK_EX);
  
-@@ -122,10 +165,23 @@ sub write
+@@ -122,10 +165,24 @@ sub write
          print {$fh} $line, "\n" or logger("Error writing results: $!");
      }
  
@@ -178,7 +178,8 @@ index a2418cbf..57e61492 100644
 +
 +    while (my ($plain, $suffixed) = each %{$self->{files_to_commit}}) {
 +	move($suffixed, $plain)
-+	  or die "File commit failed: $!";
++	  or die "File commit ($suffixed -> $plain) failed: $!";
++	delete $self->{files_to_commit}->{$plain};
 +    }
 +}
 +
